@@ -16,15 +16,26 @@ import csv
 
 
 class Crawler:
-    def __init__(self, debugger_url='http://127.0.0.1:9222'):
+
+    gUrl = ""
+    gAipURL = []
+    gAnalyticsEnable = 0
+    gAipEnable = 0
+
+
+    def __init__(self, debugger_url='http://0.0.0.0:9222'):
         # Create a browser instance which controls Google Chrome/Chromium.
         self.browser = pychrome.Browser(url=debugger_url)
 
     def crawl_page(self, url):
+
+        self.gAnalyticsEnable = 0
+        self.gAipEnable = 0
+        gUrl = url;
         # Initialize _is_loaded variable to False. It will be set to True
         # when the loadEventFired event occurs.
         self._is_loaded = False
-
+        print("--------------------------------->>>>>>")
         # Create a tab
         self.tab = self.browser.new_tab()
 
@@ -60,13 +71,25 @@ class Crawler:
         # whether the site owner's wanted to enable anonymize IP. The expression will
         # fail with a JavaScript exception if Google Analytics is not in use.
         result = self.tab.Runtime.evaluate(expression="ga.getAll()[0].get('anonymizeIp')")
-        print('------------------------>>>>>>' , result)
+        #{'result': {'type': 'undefined'}}
+        if result['result']['type'] == 'undefined':
+            self.gAnalyticsEnable = 1
+        print('------------------------>>>>>>end: ' , result)
 
         # Stop the tab
         self.tab.stop()
 
         # Close tab
         self.browser.close_tab(self.tab)
+
+
+        print("analytics: " , self.gAnalyticsEnable )
+        print(str(url) + ", " + str(self.gAnalyticsEnable) + ", " + str(self.gAipEnable) + "\n")
+        file = open('writeToFilie.csv', "a")
+        file.write(str(url) + ", " + str(self.gAnalyticsEnable) + ", " + str(self.gAipEnable) + "\n")
+        file.close()
+        for x in self.gAipURL:
+            print(x)
 
     def _event_request_will_be_sent(self, request, **kwargs):
         """Will be called when a request is about to be sent.
@@ -77,7 +100,15 @@ class Crawler:
         Note: It does not say anything about the request being sucessful,
         there can still be connection issues.
         """
+        if request['url'].find("aip=1") != -1:
+            print("ip is anonymous in this link="+ request['url'])
+            self.gAipURL.append(request['url'])
+            self.gAipEnable = 1;
+
         pprint.pprint(request)
+
+
+        #self.file.close()
 
     def _event_response_received(self, response, **kwargs):
         """Will be called when a response is received.
@@ -85,6 +116,7 @@ class Crawler:
         This includes the originating request which resulted in the
         response being received.
         """
+        print("fahad2\n\n")
         pprint.pprint(response)
 
     def _event_load_event_fired(self, timestamp, **kwargs):
@@ -101,12 +133,13 @@ def main():
     csvreader = csv.reader(file)
     c = Crawler()
 
-    c.crawl_page('https://privacyscore.org/')
+    #c.crawl_page('https://privacyscore.org/')
+    #c.crawl_page('https://contently.com/')
     rows = []
     for row in csvreader:
-        print(row[1])
+        print('fahad-->  https://'+row[0].lstrip())
 
-        #c.crawl_page(row[1])
+        c.crawl_page('https://'+row[0].lstrip())
     rows
 
 
